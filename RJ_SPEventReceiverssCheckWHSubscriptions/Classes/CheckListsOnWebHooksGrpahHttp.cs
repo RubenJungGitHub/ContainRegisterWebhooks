@@ -28,9 +28,9 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
     {
         public async Task CheckAllSiteLists
             (
-            string[] args, 
-            string notificationUrl, 
-            int expirationMinutes,  
+            string[] args,
+            string notificationUrl,
+            int expirationMinutes,
             string tenantId,
             string clientSecret,
             string clientId,
@@ -46,7 +46,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             //Token from Graph.Beta
             //var apptoken = await graphService.GetGraphCLientToken(tenantId, true, GraphService.TokenType.App);
             var apptoken = await graphService.GetGraphCLientToken(tenantId, false, GraphService.TokenType.App);
-//            Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}");
+            //            Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}");
 
             HttpClient HttpClient = new HttpClient();
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apptoken.Token);
@@ -98,13 +98,13 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
 
 
                                 // Filter by resource
-                                 var targetSubs = subscriptions.Where(s => string.Equals(s.Resource, resourcefilter, StringComparison.OrdinalIgnoreCase)).ToList();
+                                var targetSubs = subscriptions.Where(s => string.Equals(s.Resource, resourcefilter, StringComparison.OrdinalIgnoreCase)).ToList();
                                 //fIRST REMPOVE SUBSCRIPTIONS ON DRIVES
-                                 if (targetSubs.Any())
+                                if (targetSubs.Any())
                                 {
                                     int subcounter = 0;
                                     Console.ForegroundColor = ConsoleColor.Magenta;
-                                    Console.WriteLine($"    Webhook subscriptions detected: {targetSubs.Count}");
+                                    Console.WriteLine($"Webhook DRIVE subscriptions detected: {targetSubs.Count}");
                                     Console.ForegroundColor = ConsoleColor.White;
                                     foreach (var sub in targetSubs)
                                     {
@@ -112,37 +112,36 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                         //  string ID = sub.GetProperty("id").GetString();
                                         // string url = sub.GetProperty("notificationUrl").GetString();
                                         //  DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
-                                        Console.WriteLine($"      Id: {sub.Id}");
-                                        Console.WriteLine($"      Changetype: {sub.ChangeType}");
-                                        Console.WriteLine($"      NotificationUrl:{sub.NotificationUrl}");
-                                        Console.WriteLine($"      Expires: {sub.ExpirationDateTime}");
+                                        Console.WriteLine($"Id: {sub.Id}");
+                                        Console.WriteLine($"Changetype: {sub.ChangeType}");
+                                        Console.WriteLine($"NotificationUrl:{sub.NotificationUrl}");
+                                        Console.WriteLine($"Expires: {sub.ExpirationDateTime}");
                                         //Check notificationURL and expiration. If expires today then re-register 
                                         var remainingTimespan = (sub.ExpirationDateTime?.Subtract(DateTime.Now)).GetValueOrDefault().TotalMinutes;
-                                        if (remainingTimespan <= 0 && sub.NotificationUrl == notificationUrl || list.DisplayName == "Documents")
-                                        {  //Expired -> Remove
-                                            try
-                                            {
-                                                Console.ForegroundColor = ConsoleColor.Red;
-                                                Console.WriteLine($"Subscription expired -> REMOVE!!! {sub.Id}");
-                                                Console.ForegroundColor = ConsoleColor.White;
-                                                await GClient.Subscriptions[sub.Id].DeleteAsync();
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                Console.WriteLine($"Subscription could not be removed, {ex.Message}");
-                                            }
-                                          //  reregister = true;
+                                        //Just remove
+                                        //if (remainingTimespan <= 0 && sub.NotificationUrl == notificationUrl)
+                                        //Expired -> Remove
+                                        try
+                                        {
+                                            Console.ForegroundColor = ConsoleColor.Red;
+                                            Console.WriteLine($"Subscription expired -> REMOVE!!! {sub.Id}");
+                                            Console.ForegroundColor = ConsoleColor.White;
+                                            await GClient.Subscriptions[sub.Id].DeleteAsync();
                                         }
+                                        catch (Exception ex)
+                                        {
+                                            Console.WriteLine($"Subscription could not be removed, {ex.Message}");
+                                        }
+                                        //  reregister = true;
                                         Console.ForegroundColor = ConsoleColor.Yellow;
                                         Console.WriteLine($"(Subscription #{subcounter}, id {sub.Id}) remaining webhook timespan on {list.Name} in minutes  : {remainingTimespan} : reregister -> {reregister}");
                                         Console.ForegroundColor = ConsoleColor.White;
                                     }
-
                                 }
                                 else
                                 {
-                                    Console.WriteLine("    No webhook subscriptions on Drive detected");
-                                  //  reregister = true;
+                                    Console.WriteLine("No DRIVE webhook subscriptions detected -> ReRegister");
+                                    reregister = true;
                                 }
                                 //Then check subscriptions on lists
                                 // Get subscriptions for this list
@@ -156,7 +155,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                 using var doc = JsonDocument.Parse(json);
                                 if (doc.RootElement.TryGetProperty("value", out var subs) && subs.GetArrayLength() > 0)
                                 {
-                                    Console.WriteLine($"    Webhook subscriptions detected: {subs.GetArrayLength()}");
+                                    Console.WriteLine($"Webhook LIST subscriptions detected: {subs.GetArrayLength()}");
                                     foreach (var sub in subs.EnumerateArray())
                                     {
                                         string ID = sub.GetProperty("id").GetString();
@@ -172,7 +171,14 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                             //reregister expired subscriptions
                                             try
                                             {
-                                                await GClient.Subscriptions[ID].DeleteAsync();
+                                                Console.ForegroundColor = ConsoleColor.Red;
+                                                Console.WriteLine($"Subscription id {ID} VOID, remove!!!");
+                                                await GClient
+                                                    .Sites[site.Id]
+                                                    .Lists[list.Id]
+                                                    .Subscriptions[ID]
+                                                    .DeleteAsync();
+                                                Console.ForegroundColor = ConsoleColor.White;
                                             }
                                             catch (Exception ex)
                                             {
@@ -186,7 +192,6 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
 
                                     }
                                 }
-
                                 if (reregister)
                                 {
                                     RegisterWebhook RegWH = new RegisterWebhook();

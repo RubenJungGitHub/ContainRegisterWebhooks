@@ -25,21 +25,21 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             string tenantId,
             string clientSecret,
             string clientId,
-            bool? onListCreation= false,
+            bool? onListCreation = false,
             bool? onDocLibOnly = false
             )
         {
             //Future improvement :use more generic solution and Graphservice class
             var Domain = "lls6.sharepoint.com";
-           // var Resource = "https://" + Domain;
+            // var Resource = "https://" + Domain;
             var SiteName = "/sites/SP-EventReceivers-Test";
             var sitedef = Domain + ":" + SiteName;
             //string SiteUrl = Resource + SiteName;
 
             // App registration details
-          //  var clientId = "f590b477-5bd7-47d6-8bda-36f77fa10afd";
-          //  var tenantId = "9a1b5f77-1f1a-40ac-b1a1-38617300f02a";
-          //  var clientSecret = "pE.8Q~ZQRGngJ1YliTP4EDC5bejaEl72LlBAzb50";
+            //  var clientId = "f590b477-5bd7-47d6-8bda-36f77fa10afd";
+            //  var tenantId = "9a1b5f77-1f1a-40ac-b1a1-38617300f02a";
+            //  var clientSecret = "pE.8Q~ZQRGngJ1YliTP4EDC5bejaEl72LlBAzb50";
 
             //string ListTitle = "TestWebhook";
             //string ListTitle = "Documents";
@@ -53,7 +53,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             RJ_SPEventReceiversWebhookSubscribe.Classes.GraphService graphService = new RJ_SPEventReceiversWebhookSubscribe.Classes.GraphService(config);
             GraphServiceClient GClient = await graphService.GetGraphClient(tenantId);
             var apptoken = await graphService.GetGraphCLientToken(tenantId, true, GraphService.TokenType.App);
-          //  Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}"); ;
+            //  Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}"); ;
             HttpClient HttpClient = new HttpClient();
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apptoken.Token);
             HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -128,28 +128,29 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                     }
                     else
                     {
-                        if (Convert.ToBoolean(onDocLibOnly))
-                        {   // For document libraries, use the drive resource
-                            subscription = new Subscription
-                            {
-                                ChangeType = "updated",
-                                Resource = $"/sites/{site.Id}/drives/{drive.Id}/root",
-                                NotificationUrl = notificationUrl,
-                                ExpirationDateTime = DateTimeOffset.UtcNow.AddDays(expirationMinutes),
-                                ClientState = clientSecret
-                            };
-                        }
-                        else
+                        /*
+                         if (Convert.ToBoolean(onDocLibOnly) && list.DisplayName != "Documents")
+                         {   // For document libraries, use the drive resource
+                             subscription = new Subscription
+                             {
+                                 ChangeType = "updated",
+                                 Resource = $"/sites/{site.Id}/drives/{drive.Id}/root",
+                                 NotificationUrl = notificationUrl,
+                                 ExpirationDateTime = DateTimeOffset.UtcNow.AddDays(expirationMinutes),
+                                 ClientState = clientSecret
+                             };
+                         }
+                         else
+                         {
+                        */
+                        subscription = new Subscription
                         {
-                            subscription = new Subscription
-                            {
-                                ChangeType = "updated",
-                                Resource = $"/sites/{site.Id}/lists/{listId}",
-                                NotificationUrl = notificationUrl,
-                                ExpirationDateTime = DateTimeOffset.UtcNow.AddDays(expirationMinutes),
-                                ClientState = clientSecret
-                            };
-                        }
+                            ChangeType = "updated",
+                            Resource = $"/sites/{site.Id}/lists/{listId}",
+                            NotificationUrl = notificationUrl,
+                            ExpirationDateTime = DateTimeOffset.UtcNow.AddDays(expirationMinutes),
+                            ClientState = clientSecret
+                        };
                     }
                 }
                 else
@@ -174,7 +175,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                 {
                     var createdSubscription = await graphClient.Subscriptions.PostAsync(subscription);
                     Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine($"Webhook registered on list {list.DisplayName} ! Subscription ID: {createdSubscription.Id}");
+                    Console.WriteLine($"Webhook type  {subscription.ChangeType} on {subscription.Resource} registered on list {list.DisplayName} ! Subscription ID: {createdSubscription.Id}");
                     Console.ForegroundColor = ConsoleColor.White;
                 }
                 catch (Microsoft.Graph.Models.ODataErrors.ODataError ex)

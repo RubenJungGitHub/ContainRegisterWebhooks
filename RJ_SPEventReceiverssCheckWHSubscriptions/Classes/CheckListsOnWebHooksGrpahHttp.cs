@@ -3,6 +3,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
     using AngleSharp.Html.Parser.Tokens;
     using Azure.Core;
     using Azure.Identity;
+    using DocumentFormat.OpenXml.Office2010.Excel;
     using DocumentFormat.OpenXml.Spreadsheet;
     using Microsoft.AspNetCore.SignalR;
     using Microsoft.Graph;
@@ -98,6 +99,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
 
                                 // Filter by resource
                                  var targetSubs = subscriptions.Where(s => string.Equals(s.Resource, resourcefilter, StringComparison.OrdinalIgnoreCase)).ToList();
+                                //fIRST REMPOVE SUBSCRIPTIONS ON DRIVES
                                  if (targetSubs.Any())
                                 {
                                     int subcounter = 0;
@@ -116,7 +118,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                         Console.WriteLine($"      Expires: {sub.ExpirationDateTime}");
                                         //Check notificationURL and expiration. If expires today then re-register 
                                         var remainingTimespan = (sub.ExpirationDateTime?.Subtract(DateTime.Now)).GetValueOrDefault().TotalMinutes;
-                                        if (remainingTimespan <= 0 && sub.NotificationUrl == notificationUrl)
+                                        if (remainingTimespan <= 0 && sub.NotificationUrl == notificationUrl || list.DisplayName == "Documents")
                                         {  //Expired -> Remove
                                             try
                                             {
@@ -129,22 +131,66 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                             {
                                                 Console.WriteLine($"Subscription could not be removed, {ex.Message}");
                                             }
-                                            reregister = true;
+                                          //  reregister = true;
                                         }
                                         Console.ForegroundColor = ConsoleColor.Yellow;
                                         Console.WriteLine($"(Subscription #{subcounter}, id {sub.Id}) remaining webhook timespan on {list.Name} in minutes  : {remainingTimespan} : reregister -> {reregister}");
                                         Console.ForegroundColor = ConsoleColor.White;
                                     }
+
                                 }
                                 else
                                 {
-                                    Console.WriteLine("    No webhook subscriptions, to be added.");
-                                    reregister = true;
+                                    Console.WriteLine("    No webhook subscriptions on Drive detected");
+                                  //  reregister = true;
                                 }
-                                if(reregister)
+                                //Then check subscriptions on lists
+                                // Get subscriptions for this list
+                                //var subscriptions = await GClient.Sites[site.Id].Lists[list.Id].Subscriptions
+                                //endpoint = $"https://graph.microsoft.com/v1.0/drives/{drive.Id}/root/subscriptions";
+                                endpoint = $"https://graph.microsoft.com/v1.0/sites/{site.Id}/lists/{list.Id}/subscriptions";
+
+                                // Call Graph directly
+                                var resp = await HttpClient.GetAsync(endpoint);
+                                var json = await resp.Content.ReadAsStringAsync();
+                                using var doc = JsonDocument.Parse(json);
+                                if (doc.RootElement.TryGetProperty("value", out var subs) && subs.GetArrayLength() > 0)
+                                {
+                                    Console.WriteLine($"    Webhook subscriptions detected: {subs.GetArrayLength()}");
+                                    foreach (var sub in subs.EnumerateArray())
+                                    {
+                                        string ID = sub.GetProperty("id").GetString();
+                                        string url = sub.GetProperty("notificationUrl").GetString();
+                                        DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
+                                        Console.WriteLine($"      Id: {ID}");
+                                        Console.WriteLine($"      NotificationUrl:{url}");
+                                        Console.WriteLine($"      Expires: {exp}");
+                                        //Check notificationURL and expiration. If expires today then re-register
+                                        var remainingtimespan = (exp - DateTime.Now).TotalMinutes;
+                                        if (remainingtimespan <= 300000)
+                                        {
+                                            //reregister expired subscriptions
+                                            try
+                                            {
+                                                await GClient.Subscriptions[ID].DeleteAsync();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Console.ForegroundColor = ConsoleColor.Red;
+                                                Console.WriteLine($"Exception removng subscription {ex.Message}");
+                                                Console.ForegroundColor = ConsoleColor.White;
+                                            }
+                                            reregister = true;
+                                        }
+                                        Console.WriteLine($"remaining timespan in minutes  : {remainingtimespan} : reregister -> {reregister}");
+
+                                    }
+                                }
+
+                                if (reregister)
                                 {
                                     RegisterWebhook RegWH = new RegisterWebhook();
-                                    await RegWH.RegisterWebhookAsync(args, list.Id, site.WebUrl, notificationUrl, expirationMinutes, tenantId, clientSecret, clientId, false, true);
+                                    await RegWH.RegisterWebhookAsync(args, list.Id, site.WebUrl, notificationUrl, expirationMinutes, tenantId, clientSecret, clientId, false, false);
                                 }
                             }
                             catch (ServiceException ex)

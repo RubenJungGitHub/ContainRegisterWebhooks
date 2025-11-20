@@ -163,7 +163,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                     */
                     subscription = new Subscription
                     {
-                        ChangeType = "created",
+                        ChangeType = "created,updated,deleted",
                         NotificationUrl = notificationUrl,
                         Resource = "/sites/{site-id}/lists",
                         ExpirationDateTime = DateTimeOffset.UtcNow.AddMinutes(expirationMinutes),

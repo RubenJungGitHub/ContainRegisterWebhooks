@@ -75,7 +75,7 @@ app.MapPost("/api/WebHookListener", async (HttpRequest request, HttpResponse res
         await response.WriteAsync(validationToken);  // echo token
         return;
     }
-    response.StatusCode = 202;
+    response.StatusCode = 200;
     await response.WriteAsync("Accepted");
 });
 

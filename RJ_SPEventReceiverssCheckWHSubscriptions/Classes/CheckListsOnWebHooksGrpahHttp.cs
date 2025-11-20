@@ -82,7 +82,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                         if (drive.DriveType == "documentLibrary")
                         {
                             Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine($"  List: {list.DisplayName}");
+                            Console.WriteLine($"List: {list.DisplayName}");
                             Console.ForegroundColor = ConsoleColor.White;
                             resourcefilter = "/drives/" + drive.Id + "/root";
 
@@ -161,9 +161,9 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                         string ID = sub.GetProperty("id").GetString();
                                         string url = sub.GetProperty("notificationUrl").GetString();
                                         DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
-                                        Console.WriteLine($"      Id: {ID}");
-                                        Console.WriteLine($"      NotificationUrl:{url}");
-                                        Console.WriteLine($"      Expires: {exp}");
+                                        Console.WriteLine($"Id: {ID}");
+                                        Console.WriteLine($"NotificationUrl:{url}");
+                                        Console.WriteLine($"Expires: {exp}");
                                         //Check notificationURL and expiration. If expires today then re-register
                                         var remainingtimespan = (exp - DateTime.Now).TotalMinutes;
                                         if (remainingtimespan <= 300000)
@@ -189,8 +189,12 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                             reregister = true;
                                         }
                                         Console.WriteLine($"remaining timespan in minutes  : {remainingtimespan} : reregister -> {reregister}");
-
                                     }
+                                }
+                                else
+                                {
+                                    Console.WriteLine("No webhook subscriptions on list detected");
+                                    reregister = true;
                                 }
                                 if (reregister)
                                 {

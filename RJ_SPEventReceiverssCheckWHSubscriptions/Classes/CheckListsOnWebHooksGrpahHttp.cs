@@ -82,7 +82,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                         if (drive.DriveType == "documentLibrary")
                         {
                             Console.ForegroundColor = ConsoleColor.Cyan;
-                            Console.WriteLine($"  List: {list.DisplayName}");
+                            Console.WriteLine($"List: {list.DisplayName}");
                             Console.ForegroundColor = ConsoleColor.White;
                             resourcefilter = "/drives/" + drive.Id + "/root";
 
@@ -104,7 +104,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                 {
                                     int subcounter = 0;
                                     Console.ForegroundColor = ConsoleColor.Magenta;
-                                    Console.WriteLine($"    Webhook subscriptions detected: {targetSubs.Count}");
+                                    Console.WriteLine($"Webhook subscriptions detected: {targetSubs.Count}");
                                     Console.ForegroundColor = ConsoleColor.White;
                                     foreach (var sub in targetSubs)
                                     {
@@ -112,10 +112,10 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                         //  string ID = sub.GetProperty("id").GetString();
                                         // string url = sub.GetProperty("notificationUrl").GetString();
                                         //  DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
-                                        Console.WriteLine($"      Id: {sub.Id}");
-                                        Console.WriteLine($"      Changetype: {sub.ChangeType}");
-                                        Console.WriteLine($"      NotificationUrl:{sub.NotificationUrl}");
-                                        Console.WriteLine($"      Expires: {sub.ExpirationDateTime}");
+                                        Console.WriteLine($"Id: {sub.Id}");
+                                        Console.WriteLine($"Changetype: {sub.ChangeType}");
+                                        Console.WriteLine($"NotificationUrl:{sub.NotificationUrl}");
+                                        Console.WriteLine($"Expires: {sub.ExpirationDateTime}");
                                         //Check notificationURL and expiration. If expires today then re-register 
                                         var remainingTimespan = (sub.ExpirationDateTime?.Subtract(DateTime.Now)).GetValueOrDefault().TotalMinutes;
                                         if (remainingTimespan <= 0 && sub.NotificationUrl == notificationUrl || list.DisplayName == "Documents")
@@ -141,7 +141,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                 }
                                 else
                                 {
-                                    Console.WriteLine("    No webhook subscriptions on Drive detected");
+                                    Console.WriteLine("No webhook subscriptions on Drive detected");
                                   //  reregister = true;
                                 }
                                 //Then check subscriptions on lists
@@ -156,15 +156,15 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                 using var doc = JsonDocument.Parse(json);
                                 if (doc.RootElement.TryGetProperty("value", out var subs) && subs.GetArrayLength() > 0)
                                 {
-                                    Console.WriteLine($"    Webhook subscriptions detected: {subs.GetArrayLength()}");
+                                    Console.WriteLine($"#List webhook subscriptions detected: {subs.GetArrayLength()}");
                                     foreach (var sub in subs.EnumerateArray())
                                     {
                                         string ID = sub.GetProperty("id").GetString();
                                         string url = sub.GetProperty("notificationUrl").GetString();
                                         DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
-                                        Console.WriteLine($"      Id: {ID}");
-                                        Console.WriteLine($"      NotificationUrl:{url}");
-                                        Console.WriteLine($"      Expires: {exp}");
+                                        Console.WriteLine($"Id: {ID}");
+                                        Console.WriteLine($"NotificationUrl:{url}");
+                                        Console.WriteLine($"Expires: {exp}");
                                         //Check notificationURL and expiration. If expires today then re-register
                                         var remainingtimespan = (exp - DateTime.Now).TotalMinutes;
                                         if (remainingtimespan <= 300000)
@@ -172,7 +172,12 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                             //reregister expired subscriptions
                                             try
                                             {
-                                                await GClient.Subscriptions[ID].DeleteAsync();
+                                                await GClient.Sites[site.Id].Lists[list.Id].Subscriptions[ID].DeleteAsync();
+                                                Console.ForegroundColor = ConsoleColor.Red;
+                                                Console.WriteLine($"Subscription void -> REMOVE!!! {ID}");
+                                                Console.ForegroundColor = ConsoleColor.White;
+                                                reregister = true;
+                                                //await GClient.Subscriptions[ID].DeleteAsync();
                                             }
                                             catch (Exception ex)
                                             {
@@ -183,8 +188,12 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                             reregister = true;
                                         }
                                         Console.WriteLine($"remaining timespan in minutes  : {remainingtimespan} : reregister -> {reregister}");
-
                                     }
+                                }
+                                else
+                                {
+                                    Console.WriteLine("No webhook subscriptions on list detected");
+                                    reregister = true;
                                 }
 
                                 if (reregister)

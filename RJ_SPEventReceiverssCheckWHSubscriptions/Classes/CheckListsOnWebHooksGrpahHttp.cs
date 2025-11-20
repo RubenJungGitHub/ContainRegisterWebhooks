@@ -36,29 +36,6 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             bool? onDocLibOnly = false
             )
         {
-
-            //Future improvement :use more generic solution and Graphservice class
-          //  var Domain = "lls6.sharepoint.com";
-          //  var Resource = "https://" + Domain;
-          //  var SiteName = "/sites/SP-EventReceivers-Test";
-          //  var sitedef = Domain + ":" + SiteName;
-          //  string SiteUrl = Resource + SiteName;
-
-            // App registration details
-           // var clientId = "f590b477-5bd7-47d6-8bda-36f77fa10afd";
-     
-           // var clientSecret = "pE.8Q~ZQRGngJ1YliTP4EDC5bejaEl72LlBAzb50";
-
-            // First page request: GET /sites?search=.
-            //var sitesResponse = await GClient.Sites.Search(".").GetAsync(); // broad search to match all site collections
-            //var HttpClient = graphService.GetHttpClient(tenantId, true);
-            //HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-            //string notificationUrl = "https://gangrenous-kandis-unmunched.ngrok-free.dev/api/WebHookListener"; // Must be HTTPS and reachable
-
-            //int expirationDays = 30; // Max 43200 minutes (30 days) for list webhooks
-
-            //var credential = new ClientSecretCredential(tenantId, clientId, clientSecret);
-            //var scopes = new[] { "https://graph.microsoft.com/.default" };
             //Get all sites 
             IConfiguration config = new ConfigurationBuilder()
             .AddJsonFile("appsettings.json")
@@ -68,7 +45,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             //Token from Graph.Beta
             //var apptoken = await graphService.GetGraphCLientToken(tenantId, true, GraphService.TokenType.App);
             var apptoken = await graphService.GetGraphCLientToken(tenantId, false, GraphService.TokenType.App);
-            Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}");
+//            Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}");
 
             HttpClient HttpClient = new HttpClient();
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apptoken.Token);
@@ -89,9 +66,12 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             foreach (var site in sites.Value)
             {
                 //For debug only check one site
+                string resourcefilter = "";
                 if (site.WebUrl == "https://lls6.sharepoint.com/sites/SP-EventReceivers-Test")
                 {
+
                     Console.WriteLine($"{site.DisplayName} -> {site.WebUrl}");
+
                     //Get site lists 
                     var lists = await GClient.Sites[site.Id].Lists.GetAsync();
                     foreach (var list in lists.Value)
@@ -100,37 +80,60 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                         var drive = await GClient.Sites[site.Id].Lists[list.Id].Drive.GetAsync();
                         if (drive.DriveType == "documentLibrary")
                         {
+                            Console.ForegroundColor = ConsoleColor.Cyan;
                             Console.WriteLine($"  List: {list.DisplayName}");
+                            Console.ForegroundColor = ConsoleColor.White;
+                            resourcefilter = "/drives/" + drive.Id + "/root";
+
                             try
                             {
                                 // Get subscriptions for this list
                                 //var subscriptions = await GClient.Sites[site.Id].Lists[list.Id].Subscriptions
-                                endpoint = $"https://graph.microsoft.com/v1.0/drives/{drive.Id}/root/subscriptions";
-                                //endpoint = $"https://graph.microsoft.com/v1.0/sites/{site.Id}/lists/{list.Id}/subscriptions";
+                                //Return all subscriptions. 
+                                var subsResponse = await GClient.Subscriptions.GetAsync();
 
                                 // Call Graph directly
-                                var resp = await HttpClient.GetAsync(endpoint);
-                                var json = await resp.Content.ReadAsStringAsync();
-                                using var doc = JsonDocument.Parse(json);
-                                if (doc.RootElement.TryGetProperty("value", out var subs) && subs.GetArrayLength() > 0)
+                                var subscriptions = subsResponse?.Value ?? new List<Subscription>();
+
+
+                                // Filter by resource
+                                 var targetSubs = subscriptions.Where(s => string.Equals(s.Resource, resourcefilter, StringComparison.OrdinalIgnoreCase)).ToList();
+                                 if (targetSubs.Any())
                                 {
-                                    Console.WriteLine($"    Webhook subscriptions detected: {subs.GetArrayLength()}");
-                                    foreach (var sub in subs.EnumerateArray())
+                                    int subcounter = 0;
+                                    Console.ForegroundColor = ConsoleColor.Magenta;
+                                    Console.WriteLine($"    Webhook subscriptions detected: {targetSubs.Count}");
+                                    Console.ForegroundColor = ConsoleColor.White;
+                                    foreach (var sub in targetSubs)
                                     {
-                                        string ID = sub.GetProperty("id").GetString();
-                                        string url = sub.GetProperty("notificationUrl").GetString();
-                                        DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
-                                        Console.WriteLine($"      Id: {ID}");
-                                        Console.WriteLine($"      NotificationUrl:{url}");
-                                        Console.WriteLine($"      Expires: {exp}");
+                                        subcounter++;
+                                        //  string ID = sub.GetProperty("id").GetString();
+                                        // string url = sub.GetProperty("notificationUrl").GetString();
+                                        //  DateTime exp = sub.GetProperty("expirationDateTime").GetDateTime();
+                                        Console.WriteLine($"      Id: {sub.Id}");
+                                        Console.WriteLine($"      Changetype: {sub.ChangeType}");
+                                        Console.WriteLine($"      NotificationUrl:{sub.NotificationUrl}");
+                                        Console.WriteLine($"      Expires: {sub.ExpirationDateTime}");
                                         //Check notificationURL and expiration. If expires today then re-register 
-                                        var remainingtimespan = (exp - DateTime.Now).TotalMinutes;
-                                        if (remainingtimespan <= 300000 && notificationUrl == url)
-                                        {
+                                        var remainingTimespan = (sub.ExpirationDateTime?.Subtract(DateTime.Now)).GetValueOrDefault().TotalMinutes;
+                                        if (remainingTimespan <= 0 && sub.NotificationUrl == notificationUrl)
+                                        {  //Expired -> Remove
+                                            try
+                                            {
+                                                Console.ForegroundColor = ConsoleColor.Red;
+                                                Console.WriteLine($"Subscription expired -> REMOVE!!! {sub.Id}");
+                                                Console.ForegroundColor = ConsoleColor.White;
+                                                await GClient.Subscriptions[sub.Id].DeleteAsync();
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Console.WriteLine($"Subscription could not be removed, {ex.Message}");
+                                            }
                                             reregister = true;
                                         }
-                                        Console.WriteLine($"remaining timespan in minutes  : {remainingtimespan} : reregister -> {reregister}");
-
+                                        Console.ForegroundColor = ConsoleColor.Yellow;
+                                        Console.WriteLine($"(Subscription #{subcounter}, id {sub.Id}) remaining webhook timespan on {list.Name} in minutes  : {remainingTimespan} : reregister -> {reregister}");
+                                        Console.ForegroundColor = ConsoleColor.White;
                                     }
                                 }
                                 else
@@ -152,7 +155,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                     }
                 }
             }
-            Thread.Sleep(30000);
+            Console.WriteLine("Webhook registrations completed");
         }
     }
 }

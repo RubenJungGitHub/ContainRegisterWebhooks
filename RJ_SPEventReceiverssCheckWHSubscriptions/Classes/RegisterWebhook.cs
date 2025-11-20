@@ -18,6 +18,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                         (
             string[] args,
             string listId,
+
             string SiteUrl,
             string notificationUrl,
             int expirationMinutes,
@@ -52,7 +53,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             RJ_SPEventReceiversWebhookSubscribe.Classes.GraphService graphService = new RJ_SPEventReceiversWebhookSubscribe.Classes.GraphService(config);
             GraphServiceClient GClient = await graphService.GetGraphClient(tenantId);
             var apptoken = await graphService.GetGraphCLientToken(tenantId, true, GraphService.TokenType.App);
-            Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}"); ;
+          //  Console.WriteLine($"App Access Token: {apptoken.Token} -> TokenType = {graphService.tokenType}"); ;
             HttpClient HttpClient = new HttpClient();
             HttpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", apptoken.Token);
             HttpClient.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
@@ -74,7 +75,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             string hostname = parts[0];
             string siteCollectionId = parts[1];  // site collection GUIforsD
             string siteId = parts[2];           // actual site GUID
-            var list = await graphClient.Sites[site.Id].GetAsync();
+            var list = await graphClient.Sites[site.Id].Lists[listId].GetAsync();
 
             //To do  validation if null
             //var listId = list.Id;
@@ -172,7 +173,9 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                 try
                 {
                     var createdSubscription = await graphClient.Subscriptions.PostAsync(subscription);
-                    Console.WriteLine($"Webhook registered on list ! Subscription ID: {createdSubscription.Id}");
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine($"Webhook registered on list {list.DisplayName} ! Subscription ID: {createdSubscription.Id}");
+                    Console.ForegroundColor = ConsoleColor.White;
                 }
                 catch (Microsoft.Graph.Models.ODataErrors.ODataError ex)
                 {

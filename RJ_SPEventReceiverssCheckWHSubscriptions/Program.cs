@@ -51,15 +51,15 @@ app.UseHttpsRedirection();
 // Map endpoints
 app.MapGet("/api/WebHookListener", async (HttpRequest request, HttpResponse response) =>
 {
-    if (request.Query.ContainsKey("validationtoken"))
+    if (request.Query.TryGetValue("validationtoken", out var token))
     {
-        string validationToken = request.Query["validationtoken"];
+        response.StatusCode = 200;
         response.ContentType = "text/plain";
-        await response.WriteAsync(validationToken);  // echo token
+        await response.WriteAsync(token);
         return;
     }
+
     response.StatusCode = 200;
-    await response.WriteAsync("Webhook GET OK");
 });
 
 app.MapPost("/api/WebHookListener", async (HttpRequest request, HttpResponse response) =>

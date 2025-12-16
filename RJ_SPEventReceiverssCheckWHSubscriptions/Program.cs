@@ -82,7 +82,9 @@ app.MapPost("/api/WebHookListener", async (HttpRequest request, HttpResponse res
 //Set notificationURL 
 
 // To  be securely configured, for POC not relevant yet
-string notificationUrl = "https://gangrenous-kandis-unmunched.ngrok-free.dev/api/WebHookListener"; // Must be HTTPS and reachable
+string notificationUrl = "https://gangrenous-kandis-unmunched.ngrok-free.dev/api/WebHookListener"; // FOR Ruben machine // Must be HTTPS and reachable
+//string notificationUrl = "https://unsplit-zander-stressful.ngrok-free.dev/api/WebHookListener"; // FOR Frits machine // Must be HTTPS and reachable
+
 int expirationTimeInMinutes = 10; //Max 43200 minutes (30 days) for list webhooks
 // App registration details
 var clientId = "f590b477-5bd7-47d6-8bda-36f77fa10afd";

@@ -34,7 +34,8 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
             string tenantId,
             string clientSecret,
             string clientId,
-            bool? onDocLibOnly = false
+            bool? onDocLibOnly = false,
+            bool? AlsoRemove= false
             )
         {
             //Get all sites 
@@ -99,8 +100,8 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
 
                                 // Filter by resource
                                 var targetSubs = subscriptions.Where(s => string.Equals(s.Resource, resourcefilter, StringComparison.OrdinalIgnoreCase)).ToList();
-                                //fIRST REMPOVE SUBSCRIPTIONS ON DRIVES
-                                if (targetSubs.Any())
+                                //fIRST REMPOVE SUBSCRIPTIONS ON DRIVES if configured 
+                                if (targetSubs.Any() && AlsoRemove == true)
                                 {
                                     int subcounter = 0;
                                     Console.ForegroundColor = ConsoleColor.Magenta;
@@ -140,7 +141,7 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                 }
                                 else
                                 {
-                                    Console.WriteLine("No DRIVE webhook subscriptions detected -> ReRegister");
+                                    Console.WriteLine("No DRIVE webhook subscriptions detected or new registration -> ReRegister");
                                     reregister = true;
                                 }
                                 //Then check subscriptions on lists
@@ -171,14 +172,17 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                             //reregister expired subscriptions
                                             try
                                             {
-                                                Console.ForegroundColor = ConsoleColor.Red;
-                                                Console.WriteLine($"Subscription id {ID} VOID, remove!!!");
-                                                await GClient
-                                                    .Sites[site.Id]
-                                                    .Lists[list.Id]
-                                                    .Subscriptions[ID]
-                                                    .DeleteAsync();
-                                                Console.ForegroundColor = ConsoleColor.White;
+                                                if (AlsoRemove == true)
+                                                {
+                                                    Console.ForegroundColor = ConsoleColor.Red;
+                                                    Console.WriteLine($"Subscription id {ID} VOID, remove!!!");
+                                                    await GClient
+                                                        .Sites[site.Id]
+                                                        .Lists[list.Id]
+                                                        .Subscriptions[ID]
+                                                        .DeleteAsync();
+                                                    Console.ForegroundColor = ConsoleColor.White;
+                                                }
                                             }
                                             catch (Exception ex)
                                             {

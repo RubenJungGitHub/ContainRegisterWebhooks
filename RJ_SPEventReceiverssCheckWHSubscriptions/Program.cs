@@ -31,7 +31,7 @@ Use the ngrok URL plus /api/webhook as the notificationUrl when registering the 
 
 var builder = WebApplication.CreateBuilder(args);
 // Optional: set URLs explicitly
-builder.WebHost.UseUrls("https://localhost:5001");
+builder.WebHost.UseUrls("https://localhost:5000");
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 //builder.Services.AddControllers();

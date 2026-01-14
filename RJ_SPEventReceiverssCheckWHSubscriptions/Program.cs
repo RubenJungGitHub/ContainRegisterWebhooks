@@ -108,7 +108,7 @@ await serverTask;                     // Wait for web server to be ready
 try
 {
     CheckListsOnWebHooksHTTPS CheckSubscriptions = new CheckListsOnWebHooksHTTPS();
-    await CheckSubscriptions.CheckAllSiteLists(args, notificationUrl, expirationTimeInMinutes, tenantId, clientSecret, clientId, true);
+    await CheckSubscriptions.CheckAllSiteLists(args, notificationUrl, expirationTimeInMinutes, tenantId, clientSecret, clientId, true,true);
     await host.WaitForShutdownAsync();
 }
 catch

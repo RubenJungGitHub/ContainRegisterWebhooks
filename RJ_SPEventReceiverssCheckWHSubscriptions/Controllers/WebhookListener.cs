@@ -14,7 +14,7 @@
 
 
         // Validation Request from SharePoint
-        /*
+        
         [HttpGet]
         public IActionResult Get([FromQuery] string validationtoken)
         {
@@ -26,7 +26,7 @@
             }
             return BadRequest();
         }
-        */
+        
 
         [HttpPost]
         [Consumes("application/json", "text/json", "application/*+json")]

@@ -95,7 +95,11 @@ namespace RJ_SPEventReceiversWebhookSubscribe.Classes
                                 var subsResponse = await GClient.Subscriptions.GetAsync();
 
                                 // Call Graph directly
-                                var subscriptions = subsResponse?.Value ?? new List<Subscription>();
+                                //var subscriptions = subsResponse?.Value ?? new List<Subscription>();
+                                var subscriptions = subsResponse?.Value?
+                                .Where(s => s.NotificationUrl == notificationUrl)
+                                .ToList()
+                                ?? new List<Subscription>();
 
 
                                 // Filter by resource
